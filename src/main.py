@@ -6,6 +6,7 @@ import numpy as np
 import sys
 import time
 import torch
+import json
 from tqdm import tqdm
 
 # Add src to path if running as script
@@ -218,6 +219,29 @@ def process_video(video_path, output_path, debug=False):
                 
                 for cnt in contours:
                     year_contours.append((cnt, color_bgr))
+
+                # Export Borders to JSON
+                contours_list = []
+                for cnt in contours:
+                    # cnt is (N, 1, 2) -> (N, 2) -> list of lists
+                    contours_list.append(cnt.reshape(-1, 2).tolist())
+                
+                border_data = {
+                    "year": year,
+                    "state_id": state_id,
+                    "contours": contours_list,
+                    "dimensions": {"width": w, "height": h}
+                }
+                
+                year_dir = os.path.join(config.BORDERS_DIR, str(year))
+                os.makedirs(year_dir, exist_ok=True)
+                
+                # Remove # from filename
+                safe_state_id = state_id.replace("#", "")
+                border_fname = os.path.join(year_dir, f"{safe_state_id}.json")
+                
+                with open(border_fname, 'w') as f:
+                    json.dump(border_data, f)
             
             timers['metrics'] += time.time() - t3
             
